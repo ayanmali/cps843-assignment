@@ -1,6 +1,4 @@
-def main():
-    print("Hello from cps843-assignment!")
+# def main():
 
-
-if __name__ == "__main__":
-    main()
+# if __name__ == "__main__":
+#     main()

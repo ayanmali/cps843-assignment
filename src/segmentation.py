@@ -1,0 +1,3 @@
+"""
+segmenting images into characters
+"""

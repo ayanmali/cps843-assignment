@@ -1,0 +1,1 @@
+Download the IIIT-5k dataset and place it in the root of this repository.
