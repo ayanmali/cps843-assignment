@@ -1,5 +1,5 @@
-from src.preprocessing import compress, load_img
-from src.utils import save_img, visualize_preprocessing
+from src.preprocessing import adjust_skew, compress, load_img
+from src.utils import save_img, visualize_comparison
 
 def main():
     # testing image loading
@@ -12,14 +12,16 @@ def main():
     
     # Process the image
     processed_img = compress(img)
+    processed_img = adjust_skew(processed_img)
     
     # Save the processed image
     save_img(processed_img, "processed.png")
     print("Processed image saved to processed.png")
     
     # Create a side-by-side comparison
-    visualize_preprocessing(img, "preprocessing_comparison.png")
-    print("Comparison image saved to preprocessing_comparison.png")
+    #visualize_preprocessing(img, "preprocessing_comparison.png")
+    visualize_comparison(img, processed_img, "comparison.png")
+    print("Comparison image saved to comparison.png")
 
 if __name__ == "__main__":
     main()
