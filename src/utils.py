@@ -3,7 +3,6 @@ utility functions
 """
 import cv2
 import numpy as np
-from src.preprocessing import compress
 
 def save_img(image: np.ndarray, path: str) -> None:
     """

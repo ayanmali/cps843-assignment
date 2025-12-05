@@ -30,7 +30,7 @@ def preprocess(image):
     grey = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
 
     # histogram equalization
-    equalized = hist_equalization(grey)
+    #equalized = hist_equalization(grey)
 
     # correcting the background
     # se=cv2.getStructuringElement(cv2.MORPH_RECT , (3,3))
@@ -42,7 +42,7 @@ def preprocess(image):
     # blur
     blur = cv2.GaussianBlur(grey, (0,0), sigmaX=33, sigmaY=33)
     # divide
-    divide = cv2.divide(equalized, blur, scale=255)
+    divide = cv2.divide(grey, blur, scale=255)
 
     thresh = cv2.threshold(divide, 0, 255, cv2.THRESH_BINARY_INV | cv2.THRESH_OTSU)[1]
 
@@ -71,28 +71,171 @@ def reduce_noise(image):
     """
     return cv2.GaussianBlur(image, (5, 5), 0)
 
-def adjust_skew(image, limit=10, delta=0.075):
+# def debug_skew_detection(image, limit=20, delta=0.1):
+#     """
+#     Debug function to visualize skew detection scores.
+#     Useful for understanding why skew correction might not be working.
+    
+#     Returns:
+#         dict with 'best_angle', 'scores', 'angles', and 'max_score'
+#     """
+#     if len(image.shape) == 3:
+#         image = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+#     if image.max() <= 1:
+#         image = (image * 255).astype(np.uint8)
+    
+#     def find_score(arr: np.ndarray, angle: float) -> float:
+#         data = interpolation.rotate(arr, angle, reshape=False, order=0)
+#         histogram = np.sum(data, axis=1, dtype=float)
+#         variance = np.var(histogram)
+#         diff_squared = np.sum((histogram[1:] - histogram[:-1]) ** 2)
+#         score = variance * diff_squared
+#         return score
+    
+#     scores = []
+#     angles = np.arange(-limit, limit + delta, delta)
+    
+#     for angle in angles:
+#         score = find_score(image, angle)
+#         scores.append(score)
+    
+#     best_angle = angles[np.argmax(scores)]
+#     max_score = max(scores)
+    
+#     return {
+#         'best_angle': best_angle,
+#         'scores': scores,
+#         'angles': angles,
+#         'max_score': max_score
+#     }
+
+"""
+adjust skew of image using projection profile variance method.
+fallback if hough line detection fails.
+"""
+def adjust_skew(image, limit=20, delta=0.1):
     """
-    adjust skew of image
+    adjust skew of image using projection profile variance method.
+    When text is properly aligned, the variance of horizontal projection is maximized.
+    
+    Args:
+        image: Binary image (text should be white/255, background black/0)
+        limit: Maximum angle to search in degrees (default: 20)
+        delta: Step size for angle search in degrees (default: 0.1)
+    
+    Returns:
+        Rotated image with corrected skew
     """
-    def find_score(arr: np.ndarray, angle: float) -> tuple[np.ndarray, float]:
+    def find_score(arr: np.ndarray, angle: float) -> float:
+        """
+        Calculate skew score for a given angle.
+        Higher variance in horizontal projection indicates better alignment.
+        """
+        # Rotate the image
         data = interpolation.rotate(arr, angle, reshape=False, order=0)
+        
+        # Calculate horizontal projection (sum of pixels in each row)
+        # For binary images, this counts white pixels per row
         histogram = np.sum(data, axis=1, dtype=float)
-        score = np.sum((histogram[1:] - histogram[:-1]) ** 2, dtype=float)
+        
+        # Calculate variance of the projection profile
+        # When text is aligned, variance is high (peaks at text rows, valleys at gaps)
+        # When skewed, variance decreases as text spreads across rows
+        variance = np.var(histogram)
+        
+        # Alternative: use sum of squared differences (more sensitive)
+        # This measures how "peaky" the histogram is
+        diff_squared = np.sum((histogram[1:] - histogram[:-1]) ** 2)
+        
+        # Combine both metrics for better detection
+        score = variance * diff_squared
         return score
+    
+    # Ensure we're working with a binary image
+    # If image has multiple channels, convert to grayscale first
+    if len(image.shape) == 3:
+        image = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+    
+    # Ensure binary (0 or 255)
+    if image.max() <= 1:
+        image = (image * 255).astype(np.uint8)
     
     scores = []
     angles = np.arange(-limit, limit + delta, delta)
+    
     for angle in angles:
         score = find_score(image, angle)
         scores.append(score)
 
     best_angle = angles[np.argmax(scores)]
+    
+    # Only rotate if the detected angle is significant enough
+    if abs(best_angle) < 0.1:
+        return image
+    
+    # Rotate the image using OpenCV
     (h, w) = image.shape[:2]
     center = (w // 2, h // 2)
     M = cv2.getRotationMatrix2D(center, best_angle, 1.0)
 
     rotated = cv2.warpAffine(image, M, (w, h), flags=cv2.INTER_CUBIC, \
+                              borderMode=cv2.BORDER_REPLICATE)
+    return rotated
+
+def adjust_skew_hough(image, limit=20, delta=0.1):
+    """
+    Alternative skew correction using Hough line detection.
+    This method detects text baselines and calculates skew angle from them.
+    Often more robust than projection profile method for images with clear text lines.
+    
+    Args:
+        image: Binary image (text should be white/255, background black/0)
+        limit: Maximum angle to search in degrees (default: 20)
+        delta: Step size for angle search in degrees (default: 0.1)
+    
+    Returns:
+        Rotated image with corrected skew
+    """
+    # Ensure binary image
+    if len(image.shape) == 3:
+        image = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+    
+    if image.max() <= 1:
+        image = (image * 255).astype(np.uint8)
+    
+    # Detect edges/lines using Hough transform
+    # Use probabilistic Hough transform to detect lines
+    lines = cv2.HoughLinesP(image, 1, np.pi/180, threshold=100, 
+                            minLineLength=image.shape[1]//4, maxLineGap=20)
+    
+    if lines is None or len(lines) == 0:
+        # Fallback to projection profile method if no lines detected
+        return adjust_skew(image, limit, delta)
+    
+    # Calculate angles of detected lines
+    angles = []
+    for line in lines:
+        x1, y1, x2, y2 = line[0]
+        if x2 != x1:  # Avoid division by zero
+            angle = np.arctan2(y2 - y1, x2 - x1) * 180 / np.pi
+            # Filter angles within reasonable range
+            if -limit <= angle <= limit:
+                angles.append(angle)
+    
+    if len(angles) == 0:
+        return adjust_skew(image, limit, delta)
+    
+    # Use median angle (more robust to outliers than mean)
+    best_angle = np.median(angles)
+    
+    if abs(best_angle) < 0.1:
+        return image
+    
+    # Rotate the image
+    (h, w) = image.shape[:2]
+    center = (w // 2, h // 2)
+    M = cv2.getRotationMatrix2D(center, best_angle, 1.0)
+    rotated = cv2.warpAffine(image, M, (w, h), flags=cv2.INTER_CUBIC,
                               borderMode=cv2.BORDER_REPLICATE)
     return rotated
 

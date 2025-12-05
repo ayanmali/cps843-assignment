@@ -1,4 +1,4 @@
-from src.preprocessing import adjust_skew, apply_morph, load_img, preprocess
+from src.preprocessing import adjust_skew, adjust_skew_hough, apply_morph, load_img, preprocess
 from src.utils import save_img, visualize_comparison
 
 def main():
@@ -13,7 +13,7 @@ def main():
     # Process the image
     processed_img = preprocess(img)
     processed_img = apply_morph(processed_img)
-    processed_img = adjust_skew(processed_img)
+    processed_img = adjust_skew_hough(processed_img)
     
     # Save the processed image
     save_img(processed_img, "processed.png")
