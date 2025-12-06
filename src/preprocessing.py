@@ -28,9 +28,8 @@ def preprocess(image):
     """
     # grayscaling image so that text is white, background is black
     grey = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
-
-    # histogram equalization
-    #equalized = hist_equalization(grey)
+    equalized = cv2.equalizeHist(grey)
+    inverted = cv2.bitwise_not(grey)
 
     # correcting the background
     # se=cv2.getStructuringElement(cv2.MORPH_RECT , (3,3))
@@ -38,38 +37,44 @@ def preprocess(image):
     # divide=cv2.divide(grey, bg, scale=255)
 
     # divide by blurred background
-
     # blur
-    blur = cv2.GaussianBlur(grey, (0,0), sigmaX=33, sigmaY=33)
+    blur = cv2.GaussianBlur(equalized, (0,0), sigmaX=33, sigmaY=33)
     # divide
-    divide = cv2.divide(grey, blur, scale=255)
+    divide = cv2.divide(inverted, blur, scale=255)
+
+    #median = cv2.medianBlur(divide, 3)
 
     thresh = cv2.threshold(divide, 0, 255, cv2.THRESH_BINARY_INV | cv2.THRESH_OTSU)[1]
 
-    return thresh
-
-def hist_equalization(image):
-    """
-    equalize histogram of image
-    improves contrast of image
-    """
-    return cv2.equalizeHist(image)
+    return cv2.bitwise_not(thresh)
+    #return remove_noise(thresh)
 
 def apply_morph(image):
     """
     apply morphological operations to image (erode and dilate)
     removes noise and small artifacts
     """
-    se=cv2.getStructuringElement(cv2.MORPH_RECT , (3,3))
-    morph=cv2.morphologyEx(image, cv2.MORPH_CLOSE, se)
-    out=cv2.divide(image, morph, scale=255)
+    se = cv2.getStructuringElement(cv2.MORPH_RECT , (2,2))
+    morph = cv2.morphologyEx(image, cv2.MORPH_CLOSE, se)
+    out = cv2.divide(image, morph, scale=255)
     return out
 
-def reduce_noise(image):
+# TODO: see if this is needed
+def remove_noise(image):
     """
-    reduce noise from image
+    remove noise from image
     """
-    return cv2.GaussianBlur(image, (5, 5), 0)
+    se = cv2.getStructuringElement(cv2.MORPH_RECT , (3,3))
+    morph = cv2.morphologyEx(image, cv2.MORPH_OPEN, se)
+    out = cv2.divide(image, morph, scale=255)
+    return out
+
+
+# def reduce_noise(image):
+#     """
+#     reduce noise from image
+#     """
+#     return cv2.GaussianBlur(image, (5, 5), 0)
 
 # def debug_skew_detection(image, limit=20, delta=0.1):
 #     """
