@@ -1,6 +1,7 @@
-from src.preprocessing import adjust_skew, adjust_skew_hough, apply_morph, load_img, preprocess, remove_noise
+import cv2
+from src.preprocessing import adjust_skew_hough, apply_morph, detect_edges, fill_edges, load_img, preprocess
 # Alternative: remove_noise_connected_components() for more precise but slower noise removal
-from src.utils import save_img, visualize_comparison
+from src.utils import save_img, visualize_comparison, resize_to_fixed_size
 # Import all segmentation methods - try different ones if hybrid doesn't work well
 from src.segmentation import segment_characters, segment_characters_projection, segment_characters_hybrid, visualize_segmentation  # noqa: F401
 
@@ -17,6 +18,12 @@ def main():
     processed_img = preprocess(img)
     processed_img = apply_morph(processed_img)
     processed_img = adjust_skew_hough(processed_img)
+    # TODO: see if this is needed
+    # detected_edges = detect_edges(processed_img)
+    # processed_img = fill_edges(detected_edges)
+
+    #visualize_comparison(img, filled_edges, "filled_edges.png")
+    #print("Filled edges image saved to filled_edges.png")
     
     # Save the processed image
     save_img(processed_img, "processed.png")
@@ -34,7 +41,8 @@ def main():
     #   - segment_characters(): Uses connected components only (good for well-separated chars)
     #   - segment_characters_projection(): Uses projection profiling (now with splitting support)
     #   - segment_characters_hybrid(): Combines both methods (recommended for close characters)
-    characters = segment_characters_projection(processed_img)
+    
+    characters = segment_characters_hybrid(processed_img)
     print(f"Found {len(characters)} characters")
     
     # # Visualize segmentation
@@ -42,9 +50,16 @@ def main():
     print("Segmentation visualization saved to segmentation.png")
     
     # # Save individual character images
+    # Resize each character to fixed size (28x28) for CNN training
+    target_size = (28, 28)
     for i, (char_img, bbox) in enumerate(characters):
-        save_img(char_img, f"char_{i:02d}.png")
-    print(f"Saved {len(characters)} individual character images")
+        # Resize to fixed size while maintaining aspect ratio
+        # pad_color=0 means black background (since preprocess outputs text=white, bg=black)
+        resized_char = resize_to_fixed_size(char_img, target_size=target_size, 
+                                           maintain_aspect=True, pad_color=255)
+        save_img(resized_char, f"char_{i:02d}.png")
+        print(f"Original shape: {char_img.shape}, Resized shape: {resized_char.shape}")
+    print(f"Saved {len(characters)} individual character images (resized to {target_size})")
 
 if __name__ == "__main__":
     main()

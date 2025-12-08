@@ -59,6 +59,99 @@ def apply_morph(image):
     out = cv2.divide(image, morph, scale=255)
     return out
 
+def detect_edges(image):
+    """
+    detect edges from image
+    """
+    edges = cv2.Canny(image, 50, 150)
+    return edges
+
+def fill_edges(edges):
+    """
+    Fill edges from image, preserving holes in characters (e.g., the center of 'A', 'B', 'D', etc.).
+    
+    Uses contour hierarchy to distinguish between external boundaries (which should be filled)
+    and internal holes (which should remain empty).
+    
+    Args:
+        edges: Binary edge image from Canny edge detection (edges should be white/255, background black/0)
+    
+    Returns:
+        Filled binary image with characters filled but holes preserved
+    """
+    # Use RETR_CCOMP to get contour hierarchy:
+    # - External contours: have no parent (hierarchy[i][3] == -1)
+    # - Holes: have a parent (hierarchy[i][3] != -1) and are children of external contours
+    contours, hierarchy = cv2.findContours(edges, cv2.RETR_CCOMP, cv2.CHAIN_APPROX_SIMPLE)
+    
+    if len(contours) == 0:
+        return cv2.bitwise_not(edges)
+    
+    # Create a blank image to draw filled contours on
+    filled = np.zeros_like(edges)
+    
+    # Extract hierarchy array (it's nested)
+    hierarchy = hierarchy[0]
+    
+    # Fill only external contours (those without a parent)
+    # Skip holes (those with a parent) to preserve them
+    for i, contour in enumerate(contours):
+        # hierarchy[i][3] == -1 means no parent, so it's a top-level external contour
+        # hierarchy[i][3] != -1 means it has a parent, so it's a hole (skip it)
+        if hierarchy[i][3] == -1:
+            # This is an external contour, fill it
+            cv2.drawContours(filled, [contour], -1, 255, -1)
+        # Holes are skipped, leaving them as background (0)
+    
+    # Apply morphological operations to smooth the result
+    filled = cv2.erode(filled, None, iterations=1)
+    filled = cv2.dilate(filled, None, iterations=1)
+
+    return cv2.bitwise_not(filled)
+
+# def fill_edges(image, method='contours', kernel_size=(3, 3)):
+#     """
+#     Fill character outlines after edge detection.
+    
+#     Args:
+#         image: Binary image with edge outlines (edges should be white/255, background black/0)
+#         method: Method to use for filling:
+#                 - 'contours': Find contours and fill them (most accurate)
+#                 - 'morphological': Use morphological closing to fill gaps (faster)
+#                 - 'both': Use contours first, then morphological closing (most robust)
+#         kernel_size: Size of morphological kernel (height, width) for closing operation
+    
+#     Returns:
+#         Filled binary image with filled characters
+#     """
+#     # Ensure binary format
+#     if len(image.shape) == 3:
+#         image = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+    
+#     if image.max() <= 1:
+#         image = (image * 255).astype(np.uint8)
+    
+#     result = image.copy()
+    
+#     if method in ['contours', 'both']:
+#         # Find contours from edges
+#         # Note: cv2.RETR_EXTERNAL gets only outer contours, cv2.RETR_TREE gets all
+#         contours, _ = cv2.findContours(image, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+        
+#         # Create a blank image
+#         filled = np.zeros_like(image)
+        
+#         # Fill contours
+#         cv2.drawContours(filled, contours, -1, 255, -1)  # -1 fills the contour
+        
+#         result = filled
+    
+#     if method in ['morphological', 'both']:
+#         # Apply morphological closing to fill small gaps
+#         kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, kernel_size)
+#         result = cv2.morphologyEx(result, cv2.MORPH_CLOSE, kernel, iterations=1)
+    
+#     return result
 # TODO: see if this is needed
 def remove_noise(image):
     """
