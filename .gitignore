@@ -10,3 +10,4 @@ wheels/
 .venv
 iiit-5k/
 iiit-5k.zip
+example_kfold.py

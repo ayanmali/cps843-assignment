@@ -1,9 +1,10 @@
-import cv2
-from src.preprocessing import adjust_skew_hough, apply_morph, detect_edges, fill_edges, load_img, preprocess
+from src.preprocessing import adjust_skew_hough, apply_morph, load_img, preprocess
 # Alternative: remove_noise_connected_components() for more precise but slower noise removal
 from src.utils import save_img, visualize_comparison, resize_to_fixed_size
 # Import all segmentation methods - try different ones if hybrid doesn't work well
-from src.segmentation import segment_characters, segment_characters_projection, segment_characters_hybrid, visualize_segmentation  # noqa: F401
+from src.segmentation import segment_characters_hybrid, visualize_segmentation
+
+TARGET_SIZE = (28, 28)
 
 def main():
     # testing image loading
@@ -49,17 +50,15 @@ def main():
     visualize_segmentation(processed_img, characters, "segmentation.png")
     print("Segmentation visualization saved to segmentation.png")
     
-    # # Save individual character images
+    # Save individual character images
     # Resize each character to fixed size (28x28) for CNN training
-    target_size = (28, 28)
     for i, (char_img, bbox) in enumerate(characters):
         # Resize to fixed size while maintaining aspect ratio
         # pad_color=0 means black background (since preprocess outputs text=white, bg=black)
-        resized_char = resize_to_fixed_size(char_img, target_size=target_size, 
-                                           maintain_aspect=True, pad_color=255)
+        resized_char = resize_to_fixed_size(char_img, target_size=TARGET_SIZE, maintain_aspect=True)
         save_img(resized_char, f"char_{i:02d}.png")
         print(f"Original shape: {char_img.shape}, Resized shape: {resized_char.shape}")
-    print(f"Saved {len(characters)} individual character images (resized to {target_size})")
+    print(f"Saved {len(characters)} individual character images (resized to {TARGET_SIZE})")
 
 if __name__ == "__main__":
     main()

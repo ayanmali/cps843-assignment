@@ -8,13 +8,12 @@ import pandas as pd
 # Add parent directory to path to import from src
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from src.data_loader import load_all_data, create_kfold_splits, get_fold_data
+from src.data_loader import create_kfold_splits, get_fold_data
 
 def train_with_kfold(
     n_splits: int = 5,
     train_csv: str = "iiit-5k/traindata.csv",
     test_csv: str = "iiit-5k/testdata.csv",
-    base_dir: str = "iiit-5k/IIIT5K-Word_V3.0/IIIT5K",
     shuffle: bool = True,
     random_state: int = 42
 ):

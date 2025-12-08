@@ -1,6 +1,5 @@
 """
 segmenting images into characters
-TODO: apply canny edge detection to the image before segmenting
 """
 import cv2
 import numpy as np
@@ -88,6 +87,9 @@ def segment_characters(image: np.ndarray,
         
         # Extract character region
         char_img = image[y_start:y_end, x_start:x_end].copy()
+        
+        # Remove fragments before inverting
+        char_img = remove_fragments(char_img, keep_largest_only=True)
         
         # Invert back if original was inverted
         if not invert:
@@ -184,7 +186,8 @@ def segment_characters_projection(image: np.ndarray,
                             split_chars = _split_merged_characters(char_img, char_start, char_top, invert)
                             characters.extend(split_chars)
                         else:
-                            # Single character
+                            # Single character - remove fragments before inverting
+                            char_img = remove_fragments(char_img, keep_largest_only=True)
                             if not invert:
                                 char_img = cv2.bitwise_not(char_img)
                             characters.append((char_img, (char_start, char_top, char_width, char_bottom - char_top + 1)))
@@ -209,6 +212,8 @@ def segment_characters_projection(image: np.ndarray,
                     split_chars = _split_merged_characters(char_img, char_start, char_top, invert)
                     characters.extend(split_chars)
                 else:
+                    # Remove fragments before inverting
+                    char_img = remove_fragments(char_img, keep_largest_only=True)
                     if not invert:
                         char_img = cv2.bitwise_not(char_img)
                     characters.append((char_img, (char_start, char_top, char_width, char_bottom - char_top + 1)))
@@ -362,6 +367,9 @@ def _split_merged_characters(char_img: np.ndarray, base_x: int, base_y: int,
                     if char_bottom > char_top:
                         single_char = single_char[char_top:char_bottom+1, :].copy()
                         
+                        # Remove fragments before inverting
+                        single_char = remove_fragments(single_char, keep_largest_only=True)
+                        
                         # Invert if needed
                         if not invert:
                             single_char = cv2.bitwise_not(single_char)
@@ -370,13 +378,77 @@ def _split_merged_characters(char_img: np.ndarray, base_x: int, base_y: int,
                                                        char_width, char_bottom - char_top + 1)))
     else:
         # Couldn't split, return as single character
+        # Remove fragments before inverting
+        char_img = remove_fragments(char_img, keep_largest_only=True)
         if not invert:
             char_img = cv2.bitwise_not(char_img)
         characters.append((char_img, (base_x, base_y, width, height)))
     
     return characters
 
-# TODO: apply connected components to each segment image to remove extra parts
+def remove_fragments(char_img: np.ndarray, 
+                     min_fragment_area_ratio: float = 0.1,
+                     keep_largest_only: bool = True) -> np.ndarray:
+    """
+    Remove small fragments from a character segment by keeping only the largest connected component(s).
+    This helps remove remnant pieces from adjacent letters that got included in the bounding box.
+    
+    Args:
+        char_img: Binary character image (text=white/255, background=black/0)
+        min_fragment_area_ratio: Minimum area ratio (relative to largest component) to keep a fragment.
+                                 Fragments smaller than this ratio will be removed.
+        keep_largest_only: If True, keep only the largest component. If False, keep all components
+                          above the min_fragment_area_ratio threshold.
+    
+    Returns:
+        Cleaned character image with fragments removed
+    """
+    if char_img is None or char_img.size == 0:
+        return char_img
+    
+    # Ensure binary format
+    if len(char_img.shape) == 3:
+        char_img = cv2.cvtColor(char_img, cv2.COLOR_BGR2GRAY)
+    
+    if char_img.max() <= 1:
+        char_img = (char_img * 255).astype(np.uint8)
+    
+    # Find connected components
+    num_labels, labels, stats, _ = cv2.connectedComponentsWithStats(char_img, connectivity=8)
+    
+    if num_labels <= 1:  # Only background, no components
+        return char_img
+    
+    # Get areas of all components (excluding background)
+    # Stats format: [x, y, width, height, area] - area is at index 4
+    areas = stats[1:, 4]  # Skip label 0 (background), get area column
+    
+    if len(areas) == 0:
+        return char_img
+    
+    # Find the largest component
+    largest_area = np.max(areas)
+    largest_idx = np.argmax(areas) + 1  # +1 because we skipped label 0
+    
+    # Create mask for components to keep
+    mask = np.zeros_like(labels, dtype=np.uint8)
+    
+    if keep_largest_only:
+        # Keep only the largest component
+        mask[labels == largest_idx] = 255
+    else:
+        # Keep all components above the threshold
+        min_area = largest_area * min_fragment_area_ratio
+        for i in range(1, num_labels):
+            if stats[i, 4] >= min_area:  # Area is at index 4
+                mask[labels == i] = 255
+    
+    # Apply mask to original image
+    cleaned_img = cv2.bitwise_and(char_img, mask)
+    
+    return cleaned_img
+
+
 def segment_characters_hybrid(image: np.ndarray,
                               min_width: int = 10,
                               min_height: int = 10,
@@ -463,7 +535,8 @@ def segment_characters_hybrid(image: np.ndarray,
             split_chars = _split_merged_characters(char_img, x_start, y_start, invert, min_width)
             characters.extend(split_chars)
         else:
-            # Single character
+            # Single character - remove fragments before inverting
+            char_img = remove_fragments(char_img, keep_largest_only=True)
             if not invert:
                 char_img = cv2.bitwise_not(char_img)
             characters.append((char_img, (x_start, y_start, char_width, char_height)))

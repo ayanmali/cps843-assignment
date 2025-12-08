@@ -109,49 +109,6 @@ def fill_edges(edges):
 
     return cv2.bitwise_not(filled)
 
-# def fill_edges(image, method='contours', kernel_size=(3, 3)):
-#     """
-#     Fill character outlines after edge detection.
-    
-#     Args:
-#         image: Binary image with edge outlines (edges should be white/255, background black/0)
-#         method: Method to use for filling:
-#                 - 'contours': Find contours and fill them (most accurate)
-#                 - 'morphological': Use morphological closing to fill gaps (faster)
-#                 - 'both': Use contours first, then morphological closing (most robust)
-#         kernel_size: Size of morphological kernel (height, width) for closing operation
-    
-#     Returns:
-#         Filled binary image with filled characters
-#     """
-#     # Ensure binary format
-#     if len(image.shape) == 3:
-#         image = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
-    
-#     if image.max() <= 1:
-#         image = (image * 255).astype(np.uint8)
-    
-#     result = image.copy()
-    
-#     if method in ['contours', 'both']:
-#         # Find contours from edges
-#         # Note: cv2.RETR_EXTERNAL gets only outer contours, cv2.RETR_TREE gets all
-#         contours, _ = cv2.findContours(image, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
-        
-#         # Create a blank image
-#         filled = np.zeros_like(image)
-        
-#         # Fill contours
-#         cv2.drawContours(filled, contours, -1, 255, -1)  # -1 fills the contour
-        
-#         result = filled
-    
-#     if method in ['morphological', 'both']:
-#         # Apply morphological closing to fill small gaps
-#         kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, kernel_size)
-#         result = cv2.morphologyEx(result, cv2.MORPH_CLOSE, kernel, iterations=1)
-    
-#     return result
 # TODO: see if this is needed
 def remove_noise(image):
     """
