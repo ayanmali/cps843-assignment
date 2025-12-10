@@ -386,6 +386,9 @@ def _split_merged_characters(char_img: np.ndarray, base_x: int, base_y: int,
     
     return characters
 
+"""
+TODO: see if keep_largest_only needs to be adjusted; add size-based filtering if necessary
+"""
 def remove_fragments(char_img: np.ndarray, 
                      min_fragment_area_ratio: float = 0.1,
                      keep_largest_only: bool = True) -> np.ndarray:
