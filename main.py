@@ -1,5 +1,5 @@
 import cv2
-from src.preprocessing import adjust_skew_hough, correct_slant, detect_and_fill, load_img, preprocess
+from src.preprocessing import adjust_skew_hough, correct_slant, load_img, preprocess, threshold
 # Alternative: remove_noise_connected_components() for more precise but slower noise removal
 from src.utils import save_img, visualize_comparison, resize_to_fixed_size
 # Import all segmentation methods - try different ones if hybrid doesn't work well
@@ -8,6 +8,34 @@ import numpy as np
 from typing import List, Tuple
 
 TARGET_SIZE = (28, 28)
+
+def remove_fragments(char_img: np.ndarray) -> np.ndarray:
+    """
+    Remove small fragments from a character segment by keeping only the largest connected component(s).
+    This helps remove remnant pieces from adjacent letters that got included in the bounding box.
+    
+    Args:
+        char_img: Binary character image (text=white/255, background=black/0)
+        min_fragment_area_ratio: Minimum area ratio (relative to largest component) to keep a fragment.
+                                 Fragments smaller than this ratio will be removed.
+        keep_largest_only: If True, keep only the largest component. If False, keep all components
+                          above the min_fragment_area_ratio threshold.
+    
+    Returns:
+        Cleaned character image with fragments removed
+    """
+    
+    # Connected components
+    num_labels, labels, stats, _ = cv2.connectedComponentsWithStats(char_img, connectivity=8)
+
+    # Index of largest component (excluding background=0)
+    largest_label = 1 + np.argmax(stats[1:, cv2.CC_STAT_AREA])
+
+    # Create output mask
+    clean = np.zeros_like(char_img)
+    clean[labels == largest_label] = 255
+    
+    return clean
 
 def extract_segments_from_image(
     source_image: np.ndarray,
@@ -39,6 +67,8 @@ def extract_segments_from_image(
         # Update bbox to reflect actual extracted region
         actual_w = x_end - x_start
         actual_h = y_end - y_start
+        
+        char_segment = remove_fragments(char_segment)
         
         segments.append((char_segment, (x_start, y_start, actual_w, actual_h)))
     
@@ -168,23 +198,15 @@ def main():
     # Process the image
     processed_img = preprocess(img)
     #processed_img = apply_morph(processed_img)
-    #_, processed_img = correct_skew1(processed_img, limit=20, delta=0.1)
     processed_img = adjust_skew_hough(processed_img)
     processed_img = correct_slant(processed_img)
     #processed_img = cv2.threshold(processed_img, 245, 255, cv2.THRESH_BINARY)[1]
-    processed_img = cv2.threshold(processed_img, 0, 255, cv2.THRESH_BINARY | cv2.THRESH_OTSU)[1]
+    thresholded = threshold(processed_img)
     # TODO: see if this is needed
-    #detected_edges = detect_edges(processed_img)
-    #detected_edges = fill_edges(detected_edges)
-    detected_edges = detect_and_fill(processed_img)
-    #processed_img = detect_and_fill(processed_img)
-
-    #visualize_comparison(img, filled_edges, "filled_edges.png")
-    #print("Filled edges image saved to filled_edges.png")
+   
     
     # Save the processed image
     save_img(processed_img, "processed.png")
-    save_img(detected_edges, "detected_edges.png")
     print("Processed image saved to processed.png")
     
     # Create a side-by-side comparison
@@ -192,30 +214,19 @@ def main():
     visualize_comparison(img, processed_img, "comparison.png")
     print("Comparison image saved to comparison.png")
     
-    # Segment characters on detected_edges image to get better separation
-    # Using hybrid method which combines connected components with projection-based splitting
-    # This works better for characters that are close together (like "THA")
-    # Alternatives:
-    #   - segment_characters(): Uses connected components only (good for well-separated chars)
-    #   - segment_characters_projection(): Uses projection profiling (now with splitting support)
-    #   - segment_characters_hybrid(): Combines both methods (recommended for close characters)
     
     # Apply segmentation to detected_edges to get bounding boxes
-    edge_segments = segment_characters_projection(detected_edges)
-    print(f"Found {len(edge_segments)} character segments from detected_edges")
-    img_segments = segment_characters_projection(processed_img)
-    print(f"Found {len(img_segments)} character segments from processed_img")
-
+    segments = segment_characters_projection(thresholded)
+    print(f"Found {len(segments)} character segments from thresholded image")
+    
     # Extract bounding boxes from edge segmentation
-    bounding_boxes = [bbox for _, bbox in edge_segments]
+    bounding_boxes = [bbox for _, bbox in segments]
     
     # Extract actual character segments from processed_img using those bounding boxes
-    edge_characters = extract_segments_from_image(processed_img, bounding_boxes)
-    print(f"Extracted {len(edge_characters)} character segments from processed_img")
+    characters = extract_segments_from_image(processed_img, bounding_boxes)
+    #rint(f"Extracted {len(edge_characters)} character segments from processed_img")
 
-    bounding_boxes = [bbox for _, bbox in img_segments]
-    img_characters = extract_segments_from_image(processed_img, bounding_boxes)
-    print(f"Extracted {len(img_characters)} character segments from processed_img")
+    print(f"Extracted {len(characters)} character segments from processed_img")
     
     # # Split wide segments (>= 20% of original image width)
     # original_width = processed_img.shape[1]
@@ -223,19 +234,17 @@ def main():
     # print(f"Found {len(characters)} characters after splitting wide segments")
     
     # Visualize segmentation on processed_img
-    visualize_segmentation(processed_img, edge_characters, "segmentation1.png")
+    visualize_segmentation(processed_img, characters, "segmentation.png")
     print("Segmentation visualization saved to segmentation.png")
-    visualize_segmentation(processed_img, img_characters, "segmentation2.png")
-    print("Segmentation visualization saved to segmentation2.png")
-    return
+    
     # Save individual character images
     # Resize each character to fixed size (28x28) for CNN training
-    for i, (char_img, bbox) in enumerate(edge_characters):
+    for i, (char_img, _) in enumerate(characters):
         # Resize to fixed size while maintaining aspect ratio
         resized_char = resize_to_fixed_size(char_img, target_size=TARGET_SIZE, maintain_aspect=True)
-        save_img(resized_char, f"char1_{i:02d}.png")
+        save_img(resized_char, f"char_{i:02d}.png")
         print(f"Original shape: {char_img.shape}, Resized shape: {resized_char.shape}")
-    print(f"Saved {len(edge_characters)} individual character images (resized to {TARGET_SIZE})")
+    print(f"Saved {len(characters)} individual character images (resized to {TARGET_SIZE})")
 
 if __name__ == "__main__":
     main()

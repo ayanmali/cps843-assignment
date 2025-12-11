@@ -1,9 +1,8 @@
-import cv2
-from src.preprocessing import adjust_skew_hough, apply_morph, correct_skew1, correct_slant, detect_and_fill, detect_edges, fill_edges, load_img, preprocess
+from src.preprocessing import adjust_skew_hough, correct_slant, load_img, preprocess
 # Alternative: remove_noise_connected_components() for more precise but slower noise removal
 from src.utils import save_img, visualize_comparison, resize_to_fixed_size
 # Import all segmentation methods - try different ones if hybrid doesn't work well
-from src.segmentation import segment_characters, segment_characters_hybrid, segment_characters_projection, visualize_segmentation
+from src.segmentation import segment_characters, segment_characters_projection, visualize_segmentation
 import numpy as np
 from typing import List, Tuple
 
@@ -137,8 +136,8 @@ def main():
     processed_img = adjust_skew_hough(processed_img)
     processed_img = correct_slant(processed_img)
     # TODO: see if this is needed
-    detected_edges = detect_edges(processed_img)
-    detected_edges = fill_edges(detected_edges)
+    #detected_edges = detect_edges(processed_img)
+    #detected_edges = fill_edges(detected_edges)
     #processed_img = detect_and_fill(processed_img)
 
     #visualize_comparison(img, filled_edges, "filled_edges.png")

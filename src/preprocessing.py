@@ -44,12 +44,14 @@ def preprocess(image):
 
     #median = cv2.medianBlur(divide, 3)
 
-    thresh = threshold(divide, 0, 255, cv2.THRESH_BINARY_INV | cv2.THRESH_OTSU)[1]
+    thresh = threshold(divide, invert=True)
 
     return thresh
     #return remove_noise(thresh)
 
-def threshold(image):
+def threshold(image, invert=False):
+    if invert:
+        return cv2.threshold(image, 0, 255, cv2.THRESH_BINARY_INV | cv2.THRESH_OTSU)[1]
     return cv2.threshold(image, 0, 255, cv2.THRESH_BINARY | cv2.THRESH_OTSU)[1]
 
 def apply_morph(image):
