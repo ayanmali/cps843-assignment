@@ -41,7 +41,7 @@ class VGGBlock(nn.Module):
     def forward(self, x):
         return self.block(x)
 
-
+# Categorical cross-entropy loss
 class VGG16CharClassifier(nn.Module):
     """
     Simplified VGG16-based CNN for character recognition.

@@ -12,7 +12,7 @@ def save_img(image: np.ndarray, path: str) -> None:
     cv2.imwrite(path, image)
 
 def resize_to_fixed_size(image: np.ndarray, target_size: Tuple[int, int], 
-                         maintain_aspect: bool = True, pad_color: int = 255) -> np.ndarray:
+                         maintain_aspect: bool = True, pad_color: int = 0) -> np.ndarray:
     """
     Resize a character image to a fixed size while maintaining aspect ratio.
     

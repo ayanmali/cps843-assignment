@@ -7,9 +7,9 @@ from typing import List, Tuple
 
 def segment_characters(image: np.ndarray, 
                       min_width: int = 5, 
-                      min_height: int = 5,
-                      max_width_ratio: float = 10,
-                      min_area: int = 2,
+                      min_height: int = 10,
+                      max_width_ratio: float = 0.5,
+                      min_area: int = 20,
                       invert: bool = None) -> List[Tuple[np.ndarray, Tuple[int, int, int, int]]]:
     """
     Segment characters from a binarized image using connected component analysis.
@@ -454,10 +454,10 @@ def remove_fragments(char_img: np.ndarray,
 
 
 def segment_characters_hybrid(image: np.ndarray,
-                              min_width: int = 2,
-                              min_height: int = 2,
-                              max_width_ratio: float = 10,
-                              min_area: int = 1,
+                              min_width: int = 10,
+                              min_height: int = 10,
+                              max_width_ratio: float = 0.1,
+                              min_area: int = 10,
                               invert: bool = None) -> List[Tuple[np.ndarray, Tuple[int, int, int, int]]]:
     """
     Hybrid segmentation method combining connected components with projection-based splitting.
