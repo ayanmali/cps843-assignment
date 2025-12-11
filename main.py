@@ -1,5 +1,5 @@
 import cv2
-from src.preprocessing import adjust_skew_hough, correct_slant, load_img, preprocess, threshold
+from src.preprocessing import adjust_skew_hough, apply_clahe, brighten, correct_curve, correct_slant, load_img, preprocess, stretch_contrast, threshold
 # Alternative: remove_noise_connected_components() for more precise but slower noise removal
 from src.utils import save_img, visualize_comparison, resize_to_fixed_size
 # Import all segmentation methods - try different ones if hybrid doesn't work well
@@ -188,7 +188,8 @@ def extract_segments_from_image(
 def main():
     # testing image loading
     # images to test: 32_2.png, 135_5.png, 73_5.png
-    img_path = "iiit-5k/IIIT5K-Word_V3.0/IIIT5K/train/32_2.png"
+    #img_path = "iiit-5k/IIIT5K-Word_V3.0/IIIT5K/train/32_2.png"
+    img_path = "mnt/ramdisk/max/90kDICT32px/1/1/6_embracing_25311.jpg"
     img = load_img(img_path)
     
     if img is None:
@@ -200,10 +201,8 @@ def main():
     #processed_img = apply_morph(processed_img)
     processed_img = adjust_skew_hough(processed_img)
     processed_img = correct_slant(processed_img)
-    #processed_img = cv2.threshold(processed_img, 245, 255, cv2.THRESH_BINARY)[1]
-    thresholded = threshold(processed_img)
-    # TODO: see if this is needed
-   
+    processed_img = correct_curve(processed_img)
+    #thresholded = threshold(processed_img)   
     
     # Save the processed image
     save_img(processed_img, "processed.png")
@@ -213,7 +212,7 @@ def main():
     #visualize_preprocessing(img, "preprocessing_comparison.png")
     visualize_comparison(img, processed_img, "comparison.png")
     print("Comparison image saved to comparison.png")
-    
+    return
     
     # Apply segmentation to detected_edges to get bounding boxes
     segments = segment_characters_projection(thresholded)

@@ -28,8 +28,11 @@ def preprocess(image):
     """
     # grayscaling image so that text is white, background is black
     grey = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
-    equalized = cv2.equalizeHist(grey)
-    inverted = cv2.bitwise_not(grey)
+    brightened = brighten(grey, gamma=0.5) # 0.5 is default
+    stretched = stretch_contrast(brightened)
+
+    equalized = cv2.equalizeHist(stretched)
+    inverted = cv2.bitwise_not(stretched)
     
     # correcting the background
     # se=cv2.getStructuringElement(cv2.MORPH_RECT , (3,3))
@@ -54,6 +57,24 @@ def threshold(image, invert=False):
         return cv2.threshold(image, 0, 255, cv2.THRESH_BINARY_INV | cv2.THRESH_OTSU)[1]
     return cv2.threshold(image, 0, 255, cv2.THRESH_BINARY | cv2.THRESH_OTSU)[1]
 
+def stretch_contrast(image):
+    return cv2.normalize(image, None, alpha=0, beta=255, norm_type=cv2.NORM_MINMAX)
+
+def apply_clahe(image):
+    clahe = cv2.createCLAHE(clipLimit=3.0, tileGridSize=(8,8))
+    return clahe.apply(image)
+
+"""
+Brighten the image by applying a gamma correction.
+Gamma is a value between 0 and 1.
+A value less than 1 will brighten the image.
+A value greater than 1 will darken the image.
+"""
+def brighten(image, gamma=0.5):
+    look_up = np.array([((i / 255.0) ** gamma) * 255
+                    for i in range(256)]).astype("uint8")
+    return cv2.LUT(image, look_up)
+
 def apply_morph(image):
     """
     apply morphological operations to image (erode and dilate)
@@ -69,7 +90,7 @@ def apply_morph(image):
 #     detect edges from image
 #     """
 #     edges = cv2.Canny(image, 50, 150)
-#     return edges
+#     return edges    
 
 def correct_slant(image, limit=30, delta=0.5):
     """
@@ -467,6 +488,114 @@ def adjust_skew(image, limit=20, delta=0.1):
     rotated = cv2.warpAffine(image, M, (w, h), flags=cv2.INTER_CUBIC, \
                               borderMode=cv2.BORDER_REPLICATE)
     return rotated
+
+def correct_curve(image, polynomial_degree=2, min_curve_threshold=2.0):
+    """
+    Correct curved text (text following a curved baseline) to make it appear straight.
+    
+    This function detects the baseline curve of the text and applies a transformation
+    to straighten it. It works by:
+    1. Detecting the bottom-most pixels of characters (baseline)
+    2. Fitting a polynomial to the baseline curve
+    3. Applying a vertical remapping to straighten the curve
+    
+    Args:
+        image: Binary image (text should be white/255, background black/0)
+        polynomial_degree: Degree of polynomial to fit to baseline (default: 2 for quadratic)
+                          Higher degrees can handle more complex curves but may overfit
+        min_curve_threshold: Minimum curve deviation (in pixels) to apply correction.
+                            If the detected curve is less than this, no correction is applied.
+    
+    Returns:
+        Image with corrected curve (straightened baseline)
+    """
+    # Ensure binary image
+    if len(image.shape) == 3:
+        image = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+    
+    if image.max() <= 1:
+        image = (image * 255).astype(np.uint8)
+    
+    h, w = image.shape
+    
+    # Detect baseline by finding bottom-most white pixels in each column
+    # For each column, find the row with the bottom-most text pixel
+    baseline_points = []
+    
+    for x in range(w):
+        # Find bottom-most white pixel in this column
+        column = image[:, x]
+        # Find all white pixels in this column
+        white_pixels = np.where(column > 127)[0]
+        
+        if len(white_pixels) > 0:
+            # Get the bottom-most white pixel (maximum row index)
+            bottom_y = np.max(white_pixels)
+            baseline_points.append((x, bottom_y))
+    
+    if len(baseline_points) < polynomial_degree + 2:
+        # Not enough points to fit a polynomial, return original
+        print("Not enough baseline points detected, skipping curve correction")
+        return image
+    
+    # Extract x and y coordinates
+    x_coords = np.array([p[0] for p in baseline_points])
+    y_coords = np.array([p[1] for p in baseline_points])
+    
+    # Fit polynomial to baseline
+    # Use numpy's polyfit to fit a polynomial
+    coeffs = np.polyfit(x_coords, y_coords, polynomial_degree)
+    poly_func = np.poly1d(coeffs)
+    
+    # Evaluate polynomial at all x positions
+    x_all = np.arange(w)
+    baseline_curve = poly_func(x_all)
+    
+    # Calculate the mean baseline position (target straight line)
+    mean_baseline = np.mean(baseline_curve)
+    
+    # Calculate curve deviation
+    max_deviation = np.max(np.abs(baseline_curve - mean_baseline))
+    
+    if max_deviation < min_curve_threshold:
+        print(f"Curve deviation ({max_deviation:.2f}px) below threshold, skipping correction")
+        return image
+    
+    print(f"Detected curve with max deviation: {max_deviation:.2f}px")
+    
+    # Create remapping arrays for cv2.remap
+    # We'll map from the corrected (straight) image back to the original (curved) image
+    map_x = np.zeros((h, w), dtype=np.float32)
+    map_y = np.zeros((h, w), dtype=np.float32)
+    
+    for y in range(h):
+        for x in range(w):
+            # In the corrected image, x stays the same
+            map_x[y, x] = x
+            
+            # Calculate where this pixel should come from in the original image
+            # The baseline at this x position in the original image is at baseline_curve[x]
+            # The target baseline in the corrected image is at mean_baseline
+            # So we need to shift by the difference
+            
+            # Calculate the offset from the target baseline
+            offset_from_target = y - mean_baseline
+            
+            # In the original image, this offset corresponds to:
+            # original_y = baseline_curve[x] + offset_from_target
+            original_y = baseline_curve[x] + offset_from_target
+            
+            # Clamp to valid range
+            original_y = max(0, min(h - 1, original_y))
+            map_y[y, x] = original_y
+    
+    # Apply remapping transformation
+    # This maps from corrected coordinates back to original coordinates
+    corrected = cv2.remap(image, map_x, map_y, 
+                         interpolation=cv2.INTER_CUBIC,
+                         borderMode=cv2.BORDER_REPLICATE)
+    
+    return corrected
 
 def adjust_skew_hough(image, limit=20, delta=0.1):
     """
