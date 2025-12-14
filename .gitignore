@@ -15,3 +15,14 @@ totaltext.zip
 Images/
 mnt/
 mjsynth.tar.gz
+
+# Downloaded dataset archive
+IIIT5K-Word_V3.0.tar.gz
+
+# Generated demo outputs
+char_*.png
+segmentation.png
+processed.png
+comparison.png
+outputs/
+
