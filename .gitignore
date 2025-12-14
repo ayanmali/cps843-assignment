@@ -24,3 +24,5 @@ char_*.png
 segmentation.png
 processed.png
 comparison.png
+outputs/
+
