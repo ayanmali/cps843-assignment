@@ -28,18 +28,7 @@ def resize_to_fixed_size(image: np.ndarray, target_size: Tuple[int, int],
         
         new_h = int(h * scale)
         new_w = max(1, int(w * scale))
-        try:
-            resized = cv2.resize(image, (new_w, new_h), interpolation=cv2.INTER_AREA)
-        except Exception as e:
-            print(f"Error resizing image: {e}")
-            print(f"Image shape: {image.shape}")
-            print(f"Target size: {target_size}")
-            print(f"Scale: {scale}")
-            print(f"New height: {new_h}")
-            print(f"New width: {new_w}")
-            print(f"h: {h}")
-            print(f"w: {w}")
-        
+        resized = cv2.resize(image, (new_w, new_h), interpolation=cv2.INTER_AREA)
         output = np.full((target_h, target_w), pad_color, dtype=np.uint8)
         
         y_offset = (target_h - new_h) // 2

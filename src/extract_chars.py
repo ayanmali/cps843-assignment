@@ -165,8 +165,6 @@ def extract_characters(
     print(f"Total images in annotation file: {len(image_paths)}")
     print(f"Offset (already processed): {offset}")
     print(f"Available images after offset: {available_images}")
-    print(f"Training samples to extract: {train_samples}")
-    print(f"Validation samples to extract: {val_samples}")
     
     print(f"\n{'='*60}")
     print(f"Processing {split} samples...")
