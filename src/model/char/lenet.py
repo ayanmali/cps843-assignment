@@ -1,11 +1,12 @@
 
+from labels import LABELS
 import torch
 import torch.nn as nn
 
 TARGET_SIZE = (24, 24)
 
 class LeNetCharClassifier(nn.Module):
-    def __init__(self, num_classes: int = 52):
+    def __init__(self, num_classes: int = len(LABELS)):
         super(LeNetCharClassifier, self).__init__()
         
         self.conv1 = nn.Conv2d(1, 24, kernel_size=3, stride=1, padding=0)
@@ -47,7 +48,7 @@ class LeNetCharClassifier(nn.Module):
         return x
 
 
-def create_lenet_model(num_classes: int = 52):
+def create_lenet_model(num_classes: int = len(LABELS)):
     model = LeNetCharClassifier(num_classes=num_classes)
     
     _initialize_weights(model)
@@ -71,7 +72,7 @@ def count_parameters(model: nn.Module) -> int:
 
 
 if __name__ == "__main__":
-    model = create_lenet_model(num_classes=52)
+    model = create_lenet_model(num_classes=len(LABELS))
     
     print("LeNet Character Classifier")
     print("=" * 50)
@@ -87,9 +88,9 @@ if __name__ == "__main__":
     output = model(dummy_input)
     print(f"Input shape: {dummy_input.shape}")
     print(f"Output shape: {output.shape}")
-    print("Expected output: (batch_size, num_classes) = (4, 52)")
+    print(f"Expected output: (batch_size, num_classes) = (4, {len(LABELS)})")
     
-    assert output.shape == (4, 52), f"Expected output shape (4, 52), got {output.shape}"
+    assert output.shape == (4, len(LABELS)), f"Expected output shape (4, {len(LABELS)}), got {output.shape}"
     print("\nModel test passed!")
     
     print("\n" + "=" * 50)
@@ -100,6 +101,6 @@ if __name__ == "__main__":
     print("  2. Conv2: 24 -> 48 channels, 5x5 kernel")
     print("  3. FC1: 432 -> 384")
     print("  4. FC2: 384 -> 256")
-    print("  5. FC3 (Output): 256 -> 52")
+    print(f"  5. FC3 (Output): 256 -> {len(LABELS)}")
     print("\nActivation: Sigmoid (for conv and FC layers)")
     print("Pooling: MaxPool2d (2x2, stride=2)")

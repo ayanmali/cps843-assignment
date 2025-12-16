@@ -3,6 +3,7 @@ Training pipeline for CRNN sequence recognition on word images.
 Images are named as: {word}_{number}.png where {word} is the ground truth label.
 """
 import os
+from labels import LABELS
 from model.sequential.crnn import CRNN
 import torch
 import torch.nn as nn
@@ -17,12 +18,6 @@ matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 
 TARGET_HEIGHT = 32
-
-LABELS = [
-    'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M', 'N', 'O', 'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X', 'Y', 'Z',
-    'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l', 'm', 'n', 'o', 'p', 'q', 'r', 's', 't', 'u', 'v', 'w', 'x', 'y', 'z',
-    '0', '1', '2', '3', '4', '5', '6', '7', '8', '9'
-]
 
 class WordSequenceDataset(Dataset):
     def __init__(

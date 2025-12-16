@@ -1,4 +1,5 @@
 
+from labels import LABELS
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
@@ -32,7 +33,7 @@ class VGGBlock(nn.Module):
         return self.block(x)
 
 class VGG16CharClassifier(nn.Module):
-    def __init__(self, num_classes: int = 52):
+    def __init__(self, num_classes: int = len(LABELS)):
         super(VGG16CharClassifier, self).__init__()
         
         self.block1 = VGGBlock(1, 64, num_convs=2)
@@ -63,7 +64,7 @@ class VGG16CharClassifier(nn.Module):
         return x
 
 
-def create_vgg16_model(num_classes: int = 52):
+def create_vgg16_model(num_classes: int = len(LABELS)):
     model = VGG16CharClassifier(num_classes=num_classes)
     
     _initialize_weights(model)
@@ -90,7 +91,7 @@ def count_parameters(model: nn.Module) -> int:
 
 
 if __name__ == "__main__":
-    model = create_vgg16_model(num_classes=52)
+    model = create_vgg16_model(num_classes=len(LABELS))
     
     print("VGG16 Character Classifier")
     print("=" * 50)
@@ -106,9 +107,6 @@ if __name__ == "__main__":
     output = model(dummy_input)
     print(f"Input shape: {dummy_input.shape}")
     print(f"Output shape: {output.shape}")
-    print("Expected output: (batch_size, num_classes) = (4, 52)")
-    
-    # Verify output
-    assert output.shape == (4, 52), f"Expected output shape (4, 52), got {output.shape}"
+    print(f"Expected output: (batch_size, num_classes) = (4, {len(LABELS)})")
+    assert output.shape == (4, len(LABELS)), f"Expected output shape (4, {len(LABELS)}), got {output.shape}"
     print("\nModel test passed")
-

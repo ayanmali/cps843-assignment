@@ -6,6 +6,8 @@ dist/
 wheels/
 *.egg-info
 
+__MACOSX/
+
 # Virtual environments
 .venv
 iiit-5k/
@@ -16,10 +18,14 @@ mjsynth.tar.gz
 # Downloaded dataset archive
 IIIT5K-Word_V3.0.tar.gz
 
+char_train/
+char_val/
+word_train/
+word_val/
+
 # Generated demo outputs
 char_*.png
 segmentation.png
 processed.png
 comparison.png
 outputs/
-
