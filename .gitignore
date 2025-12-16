@@ -11,8 +11,15 @@ wheels/
 iiit-5k/
 *.zip
 mnt/
-char_train/
-char_val/
-word_train/
-word_val/
-__MACOSX/
+mjsynth.tar.gz
+
+# Downloaded dataset archive
+IIIT5K-Word_V3.0.tar.gz
+
+# Generated demo outputs
+char_*.png
+segmentation.png
+processed.png
+comparison.png
+outputs/
+
