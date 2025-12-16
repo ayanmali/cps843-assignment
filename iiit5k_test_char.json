@@ -1,0 +1,30 @@
+{
+    "lenet": {
+        "char_error_rate": 82.93673824724318,
+        "char_recognition_rate": 17.06326175275682,
+        "word_error_rate": 95.30844997407983,
+        "word_recognition_rate": 4.691550025920166,
+        "total_chars": 22399,
+        "correct_chars": 3822,
+        "total_words": 3858,
+        "correct_words": 181,
+        "avg_word_accuracy": 0.1837559191518448,
+        "missed_characters": 1119,
+        "extra_characters": 7897,
+        "incorrectly_segmented_words": 3061
+    },
+    "vgg16": {
+        "char_error_rate": 81.32059466940488,
+        "char_recognition_rate": 18.679405330595117,
+        "word_error_rate": 93.62363919129082,
+        "word_recognition_rate": 6.376360808709176,
+        "total_chars": 22399,
+        "correct_chars": 4184,
+        "total_words": 3858,
+        "correct_words": 246,
+        "avg_word_accuracy": 0.19991769491974756,
+        "missed_characters": 1119,
+        "extra_characters": 7897,
+        "incorrectly_segmented_words": 3061
+    }
+}

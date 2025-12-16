@@ -9,10 +9,7 @@ wheels/
 # Virtual environments
 .venv
 iiit-5k/
-iiit-5k.zip
-example_kfold.py
-totaltext.zip
-Images/
+*.zip
 mnt/
 mjsynth.tar.gz
 
