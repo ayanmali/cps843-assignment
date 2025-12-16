@@ -1,0 +1,11 @@
+{
+    "character_error_rate": 52.37102657634184,
+    "character_recognition_rate": 47.62897342365815,
+    "word_error_rate": 64.80000000000001,
+    "word_recognition_rate": 35.199999999999996,
+    "correct_characters": 11882,
+    "correct_words": 1760,
+    "total_characters": 24947,
+    "total_words": 5000,
+    "average_word_accuracy": 49.94639195565356
+}
